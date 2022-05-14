@@ -1,13 +1,13 @@
 #pragma once
 
 #include <SFML/Graphics.hpp>
-#include <string>
 #include <iostream>
 
 class Player : private sf::Sprite
 {
 private:
     int speedx_; // Only horizontal speed/movement
+    int fixedy_; // Fixed y-coordinate of player/spaceship
     sf::Keyboard::Key left_key_;
     sf::Keyboard::Key right_key_;
 
@@ -23,6 +23,8 @@ public:
     void drawPlayer(sf::RenderWindow &window);
     // Move Player
     void movePlayer(sf::Time elapsed, sf::Keyboard::Key key, sf::Vector2i windowSize);
+    // Getter for fixedy
+    int getfixedy();
 
 private:
     // Move Player to exact bounds when outside Window

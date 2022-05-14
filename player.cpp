@@ -5,9 +5,10 @@ Player::Player(sf::Texture &player_texture, sf::Vector2i windowSize)
 {
     this->setTexture(player_texture);
     this->setScale(0.25, 0.25); // 256 * 0.25 = 64
+
     // Position in center of fixed parallel X-axis.
-    this->setPosition(windowSize.x/2 -this->getGlobalBounds().width/2,
-                       windowSize.y -this->getGlobalBounds().height -5); // -5 for better visibility
+    this->fixedy_ = windowSize.y -this->getGlobalBounds().height -6; // -6 for better visibility
+    this->setPosition(windowSize.x/2 -this->getGlobalBounds().width/2, fixedy_);
 }
 
 // Setter for speed
@@ -58,4 +59,10 @@ void Player::movePlayer(sf::Time elapsed, sf::Keyboard::Key key, sf::Vector2i wi
         this->move(speedx_ * elapsed.asSeconds(), 0); // Move towards right
     }
     this->exact_bounds(player_bounds, windowSize);
+}
+
+// Getter for fixedy
+int Player::getfixedy()
+{
+    return fixedy_;
 }

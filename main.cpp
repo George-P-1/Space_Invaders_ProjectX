@@ -2,8 +2,11 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include <string>
+#include <time.h>
+#include <vector>
 
 #include <player.h>
+#include <enemy.h>
 
 int main()
 {
@@ -84,6 +87,23 @@ int main()
     Player player(player_texture, windowSize);
     player.setSpeed(400);
 
+    // Random Seed
+    std::srand(std::time(NULL)); // For random spawn location of enemies
+    // Enemy
+    sf::Texture enemy_texture;
+    if(!enemy_texture.loadFromFile("Textures/enemy.png")) std::cerr << "Could not load enemy texture." << std::endl;
+    // Enemies
+    int enemy_count = 8;
+    std::vector<Enemy> enemies;
+    for(int i = 0; i < enemy_count; i++) // Initialize with fixed number of enemies
+    {
+        Enemy enemy(enemy_texture, windowSize);
+        enemy.setSpeed(300);
+        enemy.setyLimit(player.getfixedy());
+        enemy.setVshift(52); // Change value to change difficulty // Ideal Values(factors of 416 - 16, 26, 32, 52, 104)
+        enemies.emplace_back(enemy);
+    }
+
     // Clock
     sf::Clock clock;
 
@@ -120,6 +140,19 @@ int main()
             if(sf::Keyboard::isKeyPressed(right_key))
             {
                 player.movePlayer(elapsed, right_key, windowSize); // Call move function in Player class
+            }
+        }
+
+        // -----------Enemy Movement--------------
+        if(!pause_on) // If game not paused
+        {
+            for(int i = 0; i < (int)enemies.size(); i++)
+            {
+                if(enemies[i].alive == false) // Check if enemy is still shootable/alive
+                {
+                    enemies.erase(enemies.begin() + i);
+                }
+                enemies[i].animate(elapsed, windowSize); // Animate alive enemies
             }
         }
 
@@ -180,6 +213,10 @@ int main()
         window.draw(space_background); // Draw space background first
         window.draw(fps_text); // Draw fps
         player.drawPlayer(window); // Draw player/spacship
+        for(auto &enemy : enemies) // Iterate through enemies vector
+        {
+            enemy.drawEnemy(window); // Draw Enemy
+        }
         if(pause_on == true) // If game is paused
         {
             window.draw(overlay); // Draw overlay
