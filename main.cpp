@@ -9,6 +9,48 @@
 #include <enemy.h>
 #include <bullet.h>
 
+// Setting class
+class Setting : public sf::Sprite
+{
+private:
+    bool check;
+
+public:
+    // Constructor
+    Setting(sf::Texture &texture, bool checkval)
+    {
+        this->setTexture(texture);
+        this->setScale(0.75, 0.75);
+        check = checkval;
+        setTextureBox();
+    }
+    // Getter for check
+    bool getCheck()
+    {
+        return check;
+    }
+    // Setter for check
+    void setCheck(bool checkval)
+    {
+        check = checkval;
+        setTextureBox();
+    }
+
+private:
+    // Set texture rect
+    void setTextureBox()
+    {
+        if(check == true)
+        {
+            this->setTextureRect(sf::IntRect(0, 0, 68, 64));
+        }
+        else
+        {
+            this->setTextureRect(sf::IntRect(0, 68, 68, 64));
+        }
+    }
+};
+
 void makeEnemy(sf::Texture &enemy_texture, sf::Vector2i windowSize, int enemy_speed, Player &player, std::vector<Enemy> &enemies)
 {
     Enemy enemy(enemy_texture, windowSize);
@@ -89,7 +131,7 @@ int main()
     sf::Sprite pause_button;
     pause_button.setTexture(pause_texture);
     pause_button.setScale(0.09765625, 0.09765625);  // 512 * 0.09765625 = 50
-    pause_button.setPosition(windowSize.x/2 -pause_button.getGlobalBounds().width/2, 0 +2); // +2 for better visibility
+    pause_button.setPosition(windowSize.x/2 -pause_button.getGlobalBounds().width -5, 0 +2); // +2 and -5 for better visibility
 
     // Control Keys - [<- ->] or [A D]
     bool arrow_control = true;
@@ -122,6 +164,23 @@ int main()
     Bullet bullet(bullet_texture, player.getPlayerPosition());
     bullet.setSpeed(500); // Set bullet speed
 
+    // Explosion
+    sf::Texture explosion_texture;
+    if(!explosion_texture.loadFromFile("Textures/explosion.png")) std::cerr << "Could not load explosion texture." << std::endl;
+    sf::Sprite explosion_sprite;
+    explosion_sprite.setTexture(explosion_texture);
+    int spritedim = 192; // Dimension of one sprite in sprite sheet. 192x192
+    explosion_sprite.setTextureRect(sf::IntRect(0, 0, spritedim, spritedim));
+    explosion_sprite.setScale((float)1/3, (float)1/3);
+    sf::Vector2f enemyposition;
+    bool explosion = false;
+    float total_time = 0;
+    float switch_time = 0.05; // 20 fps. Will play all 10 frames of sprite sheet in 0.5 second.
+    int totalrow = 2;
+    int totalcolumn = 5;
+    int currentrow = 1;
+    int currentcolumn = 1;
+
     // Game Over
     bool gameover = false;
     sf::Texture gameover_texture;
@@ -140,6 +199,75 @@ int main()
     playagain_button.setFont(myfont);
     playagain_button.setCharacterSize(50);
     playagain_button.setPosition(windowSize.x/2 - playagain_button.getGlobalBounds().width/2, 500);
+
+    // Start Menu
+    sf::Texture title_texture;
+    if(!title_texture.loadFromFile("Textures/title.png")) std::cerr << "Could not load title texture." << std::endl;
+    sf::Sprite title;
+    title.setTexture(title_texture);
+    title.setPosition(0, 0);
+    bool startmenu = true;
+    // Start Button
+    sf::Text start_button;
+    start_button.setString("START");
+    start_button.setStyle(sf::Text::Bold | sf::Text::Underlined);
+    start_button.setFillColor(sf::Color::Yellow);
+    start_button.setOutlineColor(sf::Color::Red);
+    start_button.setOutlineThickness(2);
+    start_button.setFont(myfont);
+    start_button.setCharacterSize(50);
+    start_button.setPosition(windowSize.x/4 - start_button.getGlobalBounds().width/2, 450);
+    sf::Text start_help;
+    start_help.setString("[Press ENTER]");
+    start_help.setStyle(sf::Text::Bold);
+    start_help.setFillColor(sf::Color::Yellow);
+    start_help.setOutlineColor(sf::Color::Red);
+    start_help.setOutlineThickness(2);
+    start_help.setFont(myfont);
+    start_help.setCharacterSize(25);
+    start_help.setPosition(windowSize.x/4 - start_help.getGlobalBounds().width/2, 520);
+    // Quit Button
+    sf::Text quit_button;
+    quit_button.setString("QUIT");
+    quit_button.setStyle(sf::Text::Bold | sf::Text::Underlined);
+    quit_button.setFillColor(sf::Color::Yellow);
+    quit_button.setOutlineColor(sf::Color::Red);
+    quit_button.setOutlineThickness(2);
+    quit_button.setFont(myfont);
+    quit_button.setCharacterSize(50);
+    quit_button.setPosition(windowSize.x * (0.75) - quit_button.getGlobalBounds().width/2, 450);
+
+    // Exit Button (With sprite)
+    sf::Texture exit_texture;
+    if(!exit_texture.loadFromFile("Textures/Buttons/exit.png")) std::cerr << "Could not load exit texture." << std::endl;
+    sf::Sprite exit_button;
+    exit_button.setTexture(exit_texture);
+    exit_button.setScale(1, 1);
+    exit_button.setPosition(windowSize.x - exit_button.getGlobalBounds().width, windowSize.y - exit_button.getGlobalBounds().height);
+
+    // Settings Menu
+    bool settings = false;
+    sf::Texture settings_texture;
+    if(!settings_texture.loadFromFile("Textures/Buttons/settings.png")) std::cerr << "Could not load settings texture." << std::endl;
+    sf::Sprite settings_button;
+    settings_button.setTexture(settings_texture);
+    settings_button.setScale(0.78125, 0.78125); // 0.78125 * 64 = 50
+    settings_button.setPosition(windowSize.x/2 +5, 0 +2); // +2 and +5 for better visibility
+    // Check box
+    sf::Texture checkbox_texture;
+    if(!checkbox_texture.loadFromFile("Textures/Buttons/checkbox.png")) std::cerr << "Could not load checkbox texture." << std::endl;
+    // FPS Setting
+    sf::Text fps_setting_text;
+    fps_setting_text.setString("Show FPS");
+    fps_setting_text.setStyle(sf::Text::Bold);
+    fps_setting_text.setFillColor(sf::Color::Red);
+    fps_setting_text.setOutlineColor(sf::Color::Black);
+    fps_setting_text.setOutlineThickness(2);
+    fps_setting_text.setFont(myfont);
+    fps_setting_text.setCharacterSize(30);
+    fps_setting_text.setPosition(windowSize.x * (0.25) - fps_setting_text.getGlobalBounds().width/2, 200);
+    Setting fps_setting(checkbox_texture, true);
+    fps_setting.setPosition(fps_setting_text.getPosition().x +fps_setting_text.getGlobalBounds().width +20, fps_setting_text.getPosition().y);
 
     // Clock
     sf::Clock clock;
@@ -167,7 +295,7 @@ int main()
         player.setLeftkey(left_key);
         player.setRightkey(right_key);
 
-        if(!pause_on && !gameover) // If game not paused and not over
+        if(!pause_on && !gameover && !startmenu && !settings) // If game not paused and not over and not in start menu and not in settings menu
         {
             // ------------Player Movement-----------
             if(sf::Keyboard::isKeyPressed(left_key))
@@ -221,12 +349,42 @@ int main()
 //                    bullet.alive = false; // in case of rapid bullet implementation
                     bullet.fired = false;
                     score += 10; // 10 points for each collision
+                    enemyposition = enemy.getEnemyPosition();
+                    explosion = true;
+                }
+            }
+
+            // ----------Explosion Animation-------------
+            if(explosion) // If explosion == true
+            {
+                // Set animation position
+                explosion_sprite.setPosition(enemyposition.x, enemyposition.y); // Center animation wrt to enemy sprite
+
+                total_time += elapsed.asSeconds();
+
+                if(total_time >= switch_time)
+                {
+                    total_time -= switch_time; // Almost same as total_time = 0;. In the long run this will prevent errors caused by approximations.
+                    explosion_sprite.setTextureRect(sf::IntRect((currentcolumn-1) * spritedim, (currentrow-1) * spritedim, spritedim, spritedim));
+                    explosion_sprite.setScale((float)1/3, (float)1/3); // 192 / 3 = 64
+                    currentcolumn++;
+                    if(currentcolumn == totalcolumn && currentrow != totalrow) // After animating first row of sprite sheet
+                    {
+                        currentrow++;
+                        currentcolumn = 1;
+                    }
+                    if(currentrow >= totalrow && currentcolumn >= totalcolumn) // If one animation is done
+                    {
+                        explosion = false;
+                        currentcolumn = 1;
+                        currentrow = 1;
+                    }
                 }
             }
         }
 
         // ------------Play Again---------------
-        if(sf::Keyboard::isKeyPressed(sf::Keyboard::R))
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::R) and gameover)
         {
             gameover = false;
             score = 0;
@@ -243,6 +401,7 @@ int main()
             return 0; // return 0 means program worked how it was supposed to.
         }
         // check all the window's events that were triggered since the last iteration of the loop
+
         sf::Event event;
         while (window.pollEvent(event))
         {
@@ -252,29 +411,60 @@ int main()
                 window.close();
             }
 
-            if(!gameover) // Only if game not over
+            if(!gameover && !startmenu) // Only if game not over
             {
                 // ----------Pause/Play - Press P and release---------
-                if(event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::P)
+                if(event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::P && !settings)
                 {
                     pause_on = !pause_on; // Beautiful
                 }
-                // --------Pause/Play - Click Pause/Play Button--------
+                // ----------Settings Menu---------
+                if(event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::S && !pause_on)
+                {
+                    settings = !settings;
+                }
+                // --------Pause/Play - Click Pause/Play Button--------Exit Button----Settings Menu-----------
                 if(event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) // If left mouse button is clicked
                 {
                     sf::Vector2i mouseclick_pos = sf::Mouse::getPosition(window);
-                    if(!pause_on) // If game not paused
+                    if(!pause_on && !settings) // If game not paused and not in settings menu
                     {
                         if(pause_button.getGlobalBounds().contains(mouseclick_pos.x, mouseclick_pos.y)) // If mouseclick is on pause button
                         {
                             pause_on = true;
+                            settings = false; // Settings menu and pause menu should be mutually exclusive
+                        }
+                        // ----------Settings Button---------------
+                        else if(settings_button.getGlobalBounds().contains(mouseclick_pos.x, mouseclick_pos.y)) // If settings button is clicked
+                        {
+                            settings = true;
                         }
                     }
-                    else // If game is paused
+                    else if(settings)
+                    {
+                        if(exit_button.getGlobalBounds().contains(mouseclick_pos.x, mouseclick_pos.y)) // if mouselick is on exit button
+                        {
+                            return 0;
+                        }
+                        else if(settings_button.getGlobalBounds().contains(mouseclick_pos.x, mouseclick_pos.y)) // If settings button is clicked
+                        {
+                            settings = false;
+                        }
+                        else if(fps_setting.getGlobalBounds().contains(mouseclick_pos.x, mouseclick_pos.y)) // if fps setting is clicked
+                        {
+                            fps_setting.setCheck(!fps_setting.getCheck());
+                            window_fps = !window_fps;
+                        }
+                    }
+                    else if(pause_on)// If game is paused
                     {
                         if(play_button.getGlobalBounds().contains(mouseclick_pos.x, mouseclick_pos.y)) // If mouseclick is on play button
                         {
                             pause_on = false;
+                        }
+                        else if(exit_button.getGlobalBounds().contains(mouseclick_pos.x, mouseclick_pos.y)) // if mouselick is on exit button
+                        {
+                            return 0;
                         }
                     }
                 }
@@ -285,7 +475,7 @@ int main()
                 if(event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) // If left mouse button is clicked
                 {
                     sf::Vector2i mouseclick_pos = sf::Mouse::getPosition(window);
-                    if(playagain_button.getGlobalBounds().contains(mouseclick_pos.x, mouseclick_pos.y))
+                    if(playagain_button.getGlobalBounds().contains(mouseclick_pos.x, mouseclick_pos.y)) // If play again button is clicked
                     {
                         gameover = false;
                         score = 0;
@@ -294,6 +484,10 @@ int main()
                         {
                             makeEnemy(enemy_texture, windowSize, enemy_speed, player, enemies);
                         }
+                    }
+                    else if(exit_button.getGlobalBounds().contains(mouseclick_pos.x, mouseclick_pos.y)) // if mouselick is on exit button
+                    {
+                        return 0;
                     }
                 }
             }
@@ -306,6 +500,24 @@ int main()
             {
                 arrow_control = !arrow_control;
             }
+
+            // -----------Start Game------------------
+            if(startmenu)
+            {
+                if(event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::Enter) startmenu = false;
+                else if(event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left)
+                {
+                    sf::Vector2i mousepos = sf::Mouse::getPosition(window);
+                    if(start_button.getGlobalBounds().contains(mousepos.x, mousepos.y)) // if start button is clicked
+                    {
+                        startmenu = false;
+                    }
+                    else if(quit_button.getGlobalBounds().contains(mousepos.x, mousepos.y)) // if quit button is clicked
+                    {
+                        return 0;
+                    }
+                }
+            }
         }
 
         // clear the window with black color
@@ -313,29 +525,52 @@ int main()
 
         // draw everything in Correct Order
         window.draw(space_background); // Draw space background first
-        window.draw(fps_text); // Draw fps
-        bullet.drawBullet(window); // Draw bullet
-        player.drawPlayer(window); // Draw player/spacship
-        for(auto &enemy : enemies) // Iterate through enemies vector
+
+        if(!startmenu) // If not on start menu
         {
-            enemy.drawEnemy(window); // Draw Enemy
+            if(window_fps) window.draw(fps_text); // Draw fps
+            bullet.drawBullet(window); // Draw bullet
+            player.drawPlayer(window); // Draw player/spacship
+            for(auto &enemy : enemies) // Iterate through enemies vector
+            {
+                enemy.drawEnemy(window); // Draw Enemy
+            }
+            if(explosion) window.draw(explosion_sprite); // Draw/Animate explosion
+            if(pause_on) // If game is paused
+            {
+                window.draw(overlay); // Draw overlay
+                window.draw(play_button); // Draw play button
+                window.draw(exit_button); // Draw exit button
+            }
+            else if(gameover) // If game over
+            {
+                window.draw(overlay); // Draw overlay
+                window.draw(gamover_background); // Draw gameover sprite
+                window.draw(playagain_button); // Draw play again prompt
+                window.draw(exit_button); // Draw exit button
+            }
+            else if(settings) // if settings is true
+            {
+                window.draw(overlay);
+                window.draw(exit_button);
+                window.draw(settings_button);
+                window.draw(fps_setting_text);
+                window.draw(fps_setting);
+            }
+            else // If game is being played
+            {
+                window.draw(pause_button);
+                window.draw(settings_button); // Draw settings button
+            }
+            window.draw(score_text); // Draw score
         }
-        if(pause_on) // If game is paused
+        else
         {
-            window.draw(overlay); // Draw overlay
-            window.draw(play_button); // Draw play button
+            window.draw(title); // Draw the title
+            window.draw(start_button); // Draw the start button
+            window.draw(start_help);
+            window.draw(quit_button); // Draw the quit button
         }
-        else if(gameover) // If game over
-        {
-            window.draw(overlay); // Draw overlay
-            window.draw(gamover_background); // Draw gameover sprite
-            window.draw(playagain_button); // Draw play again prompt
-        }
-        else // If game is being played
-        {
-            window.draw(pause_button);
-        }
-        window.draw(score_text); // Draw score
 
         // end the current frame
         window.display();
