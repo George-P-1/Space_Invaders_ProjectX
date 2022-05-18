@@ -23,8 +23,8 @@ public:
     void drawPlayer(sf::RenderWindow &window);
     // Move Player
     void movePlayer(sf::Time elapsed, sf::Keyboard::Key key, sf::Vector2i windowSize);
-    // Getter for fixedy
-    int getfixedy();
+    // Getter for position
+    sf::Vector2f getPlayerPosition();
 
 private:
     // Move Player to exact bounds when outside Window

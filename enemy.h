@@ -13,6 +13,7 @@ private:
 
 public:
     bool alive = true; // If enemy is still not destroyed
+    bool escape = false; // If enemy crossed y-limit
 
 public:
     // Constructor
@@ -27,6 +28,10 @@ public:
     void drawEnemy(sf::RenderWindow &window);
     // Enemy movement
     void animate(sf::Time elapsed, sf::Vector2i windowSize);
+    // Check collision and return bool
+    bool isCollided(sf::FloatRect &bulletbounds);
+    // Get Enemy Position
+    sf::Vector2f getEnemyPosition();
 
 private:
     // Set random spawn position for enemy
@@ -34,5 +39,5 @@ private:
     // Enemy bounce off sides of window
     void bounce_shift(sf::Vector2i windowSize);
     // Check if enemy crossed the y_limit
-    void isAlive();
+    void isEscape();
 };

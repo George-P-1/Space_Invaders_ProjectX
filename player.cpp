@@ -62,7 +62,7 @@ void Player::movePlayer(sf::Time elapsed, sf::Keyboard::Key key, sf::Vector2i wi
 }
 
 // Getter for fixedy
-int Player::getfixedy()
+sf::Vector2f Player::getPlayerPosition()
 {
-    return fixedy_;
+    return this->getPosition();
 }

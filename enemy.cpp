@@ -47,7 +47,7 @@ void Enemy::animate(sf::Time elapsed, sf::Vector2i windowSize)
 {
     this->move(speedx_ * elapsed.asSeconds(), 0);
     this->bounce_shift(windowSize);
-    this->isAlive();
+    this->isEscape();
 }
 
 // Enemy bounce off sides of window
@@ -69,7 +69,27 @@ void Enemy::bounce_shift(sf::Vector2i windowSize)
 }
 
 // Check if enemy crossed the y_limit
-void Enemy::isAlive()
+void Enemy::isEscape()
 {
-    if(current_y_ + this->getGlobalBounds().height > y_limit_) this->alive = false;
+    if(current_y_ + this->getGlobalBounds().height > y_limit_)
+    {
+        this->alive = false;
+        this->escape = true;
+    }
+}
+
+// Check collision and return bool
+bool Enemy::isCollided(sf::FloatRect &bulletbounds)
+{
+    if(this->getGlobalBounds().intersects(bulletbounds))
+    {
+        return true;
+    }
+    else return false;
+}
+
+// Get Enemy Position
+sf::Vector2f Enemy::getEnemyPosition()
+{
+    return this->getPosition();
 }

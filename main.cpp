@@ -7,6 +7,21 @@
 
 #include <player.h>
 #include <enemy.h>
+#include <bullet.h>
+
+void makeEnemy(sf::Texture &enemy_texture, sf::Vector2i windowSize, int enemy_speed, Player &player, std::vector<Enemy> &enemies)
+{
+    Enemy enemy(enemy_texture, windowSize);
+
+    // Set speed and random direction
+    bool direction = std::rand() % 2;
+    if(direction) enemy.setSpeed(enemy_speed);
+    else enemy.setSpeed(-enemy_speed);
+
+    enemy.setyLimit(player.getPlayerPosition().y);
+    enemy.setVshift(52); // Change value to change difficulty // Ideal Values(factors of 416 - 16, 26, 32, 52, 104)
+    enemies.emplace_back(enemy);
+}
 
 int main()
 {
@@ -30,7 +45,7 @@ int main()
     fps_text.setFillColor(sf::Color::Green);
     fps_text.setFont(myfont);
     fps_text.setCharacterSize(20);
-    fps_text.move(windowSize.x - fps_text.getGlobalBounds().width -5, 0); // -5 for better visibility
+    fps_text.setPosition(windowSize.x - fps_text.getGlobalBounds().width -5, 0); // -5 for better visibility
 
     // Set Background
     sf::Texture space_texture;
@@ -49,7 +64,7 @@ int main()
     score_text.setOutlineThickness(1);
     score_text.setFont(myfont);
     score_text.setCharacterSize(25);
-    score_text.move(0 +5, 0); // +5 for better visibility
+    score_text.setPosition(0 +5, 0); // +5 for better visibility
 
     // Grey Overlay for Pause/Play Feature
     sf::Texture overlay_texture;
@@ -94,15 +109,37 @@ int main()
     if(!enemy_texture.loadFromFile("Textures/enemy.png")) std::cerr << "Could not load enemy texture." << std::endl;
     // Enemies
     int enemy_count = 8;
+    int enemy_speed = 300; // Set enemy speed
     std::vector<Enemy> enemies;
     for(int i = 0; i < enemy_count; i++) // Initialize with fixed number of enemies
     {
-        Enemy enemy(enemy_texture, windowSize);
-        enemy.setSpeed(300);
-        enemy.setyLimit(player.getfixedy());
-        enemy.setVshift(52); // Change value to change difficulty // Ideal Values(factors of 416 - 16, 26, 32, 52, 104)
-        enemies.emplace_back(enemy);
+        makeEnemy(enemy_texture, windowSize, enemy_speed, player, enemies);
     }
+
+    // Bullet
+    sf::Texture bullet_texture;
+    if(!bullet_texture.loadFromFile("Textures/bullet.png")) std::cerr << "Could not load bullet texture." << std::endl;
+    Bullet bullet(bullet_texture, player.getPlayerPosition());
+    bullet.setSpeed(500); // Set bullet speed
+
+    // Game Over
+    bool gameover = false;
+    sf::Texture gameover_texture;
+    if(!gameover_texture.loadFromFile("Textures/gameover.png")) std::cerr << "Could not load gameover texture." << std::endl;
+    sf::Sprite gamover_background;
+    gamover_background.setTexture(gameover_texture);
+    gamover_background.setPosition(0, 0);
+
+    // Play Again
+    sf::Text playagain_button;
+    playagain_button.setString("PLAY AGAIN");
+    playagain_button.setStyle(sf::Text::Bold | sf::Text::Underlined);
+    playagain_button.setFillColor(sf::Color::Red);
+    playagain_button.setOutlineColor(sf::Color::Black);
+    playagain_button.setOutlineThickness(1.5);
+    playagain_button.setFont(myfont);
+    playagain_button.setCharacterSize(50);
+    playagain_button.setPosition(windowSize.x/2 - playagain_button.getGlobalBounds().width/2, 500);
 
     // Clock
     sf::Clock clock;
@@ -130,9 +167,9 @@ int main()
         player.setLeftkey(left_key);
         player.setRightkey(right_key);
 
-        // ------------Player Movement-----------
-        if(!pause_on) // If game not paused
+        if(!pause_on && !gameover) // If game not paused and not over
         {
+            // ------------Player Movement-----------
             if(sf::Keyboard::isKeyPressed(left_key))
             {
                 player.movePlayer(elapsed, left_key, windowSize); // Call move function in Player class
@@ -141,18 +178,62 @@ int main()
             {
                 player.movePlayer(elapsed, right_key, windowSize); // Call move function in Player class
             }
-        }
 
-        // -----------Enemy Movement--------------
-        if(!pause_on) // If game not paused
-        {
+            // -----------Enemy Movement--------------
             for(int i = 0; i < (int)enemies.size(); i++)
             {
-                if(enemies[i].alive == false) // Check if enemy is still shootable/alive
+                if(enemies[i].escape)// If escaped then ------------Game Over------------------
+                {
+                    gameover = true;
+                }
+                if(!enemies[i].alive) // Check if enemy is still shootable/alive. Enemy is not alive
                 {
                     enemies.erase(enemies.begin() + i);
                 }
-                enemies[i].animate(elapsed, windowSize); // Animate alive enemies
+                else
+                {
+                    enemies[i].animate(elapsed, windowSize); // Animate alive enemies
+                }
+            }
+            // Enemy respawn
+            if((int)enemies.size() != enemy_count)
+            {
+                for(int i = 0; i < enemy_count - (int)enemies.size(); i++)
+                {
+                    makeEnemy(enemy_texture, windowSize, enemy_speed, player, enemies);
+                }
+            }
+
+            // -------------Bullet Movement-------------
+            if(sf::Keyboard::isKeyPressed(sf::Keyboard::Space))
+            {
+                bullet.fired = true; // Bullet has been fired
+            }
+            bullet.animate(elapsed, player.getPlayerPosition());
+
+            // ----------Collision Detection-------------
+            for(auto &enemy : enemies)
+            {
+                sf::FloatRect bulletbounds = bullet.getGbounds();
+                if(enemy.isCollided(bulletbounds))
+                {
+                    enemy.alive = false;
+//                    bullet.alive = false; // in case of rapid bullet implementation
+                    bullet.fired = false;
+                    score += 10; // 10 points for each collision
+                }
+            }
+        }
+
+        // ------------Play Again---------------
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::R))
+        {
+            gameover = false;
+            score = 0;
+            enemies.clear(); // Clear all enemies
+            for(int i = 0; i < enemy_count; i++) // Initialize with fixed number of enemies
+            {
+                makeEnemy(enemy_texture, windowSize, enemy_speed, player, enemies);
             }
         }
 
@@ -171,27 +252,48 @@ int main()
                 window.close();
             }
 
-            // ----------Pause/Play - Press P and release---------
-            if(event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::P)
+            if(!gameover) // Only if game not over
             {
-                pause_on = !pause_on; // Beautiful
-            }
-            // --------Pause/Play - Click Pause/Play Button--------
-            if(event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) // If left mouse button is clicked
-            {
-                sf::Vector2i mouseclick_pos = sf::Mouse::getPosition(window);
-                if(!pause_on) // If game not paused
+                // ----------Pause/Play - Press P and release---------
+                if(event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::P)
                 {
-                    if(pause_button.getGlobalBounds().contains(mouseclick_pos.x, mouseclick_pos.y)) // If mouseclick is on pause button
+                    pause_on = !pause_on; // Beautiful
+                }
+                // --------Pause/Play - Click Pause/Play Button--------
+                if(event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) // If left mouse button is clicked
+                {
+                    sf::Vector2i mouseclick_pos = sf::Mouse::getPosition(window);
+                    if(!pause_on) // If game not paused
                     {
-                        pause_on = true;
+                        if(pause_button.getGlobalBounds().contains(mouseclick_pos.x, mouseclick_pos.y)) // If mouseclick is on pause button
+                        {
+                            pause_on = true;
+                        }
+                    }
+                    else // If game is paused
+                    {
+                        if(play_button.getGlobalBounds().contains(mouseclick_pos.x, mouseclick_pos.y)) // If mouseclick is on play button
+                        {
+                            pause_on = false;
+                        }
                     }
                 }
-                else // If game is paused
+            }
+            else if(gameover)
+            {
+                // ------------Play Again---------------
+                if(event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) // If left mouse button is clicked
                 {
-                    if(play_button.getGlobalBounds().contains(mouseclick_pos.x, mouseclick_pos.y)) // If mouseclick is on play button
+                    sf::Vector2i mouseclick_pos = sf::Mouse::getPosition(window);
+                    if(playagain_button.getGlobalBounds().contains(mouseclick_pos.x, mouseclick_pos.y))
                     {
-                        pause_on = false;
+                        gameover = false;
+                        score = 0;
+                        enemies.clear(); // Clear all enemies
+                        for(int i = 0; i < enemy_count; i++) // Initialize with fixed number of enemies
+                        {
+                            makeEnemy(enemy_texture, windowSize, enemy_speed, player, enemies);
+                        }
                     }
                 }
             }
@@ -212,15 +314,22 @@ int main()
         // draw everything in Correct Order
         window.draw(space_background); // Draw space background first
         window.draw(fps_text); // Draw fps
+        bullet.drawBullet(window); // Draw bullet
         player.drawPlayer(window); // Draw player/spacship
         for(auto &enemy : enemies) // Iterate through enemies vector
         {
             enemy.drawEnemy(window); // Draw Enemy
         }
-        if(pause_on == true) // If game is paused
+        if(pause_on) // If game is paused
         {
             window.draw(overlay); // Draw overlay
             window.draw(play_button); // Draw play button
+        }
+        else if(gameover) // If game over
+        {
+            window.draw(overlay); // Draw overlay
+            window.draw(gamover_background); // Draw gameover sprite
+            window.draw(playagain_button); // Draw play again prompt
         }
         else // If game is being played
         {
