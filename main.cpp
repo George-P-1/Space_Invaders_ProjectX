@@ -4,6 +4,7 @@
 #include <string>
 #include <time.h>
 #include <vector>
+#include <SFML/Audio.hpp>
 
 #include <player.h>
 #include <enemy.h>
@@ -268,6 +269,47 @@ int main()
     fps_setting_text.setPosition(windowSize.x * (0.25) - fps_setting_text.getGlobalBounds().width/2, 200);
     Setting fps_setting(checkbox_texture, true);
     fps_setting.setPosition(fps_setting_text.getPosition().x +fps_setting_text.getGlobalBounds().width +20, fps_setting_text.getPosition().y);
+    // Sound Setting
+    sf::Text sound_setting_text;
+    sound_setting_text.setString("Sound On");
+    sound_setting_text.setStyle(sf::Text::Bold);
+    sound_setting_text.setFillColor(sf::Color::Red);
+    sound_setting_text.setOutlineColor(sf::Color::Black);
+    sound_setting_text.setOutlineThickness(2);
+    sound_setting_text.setFont(myfont);
+    sound_setting_text.setCharacterSize(30);
+    sound_setting_text.setPosition(windowSize.x * (0.25) - sound_setting_text.getGlobalBounds().width/2, 300);
+    Setting sound_setting(checkbox_texture, true);
+    sound_setting.setPosition(fps_setting_text.getPosition().x +sound_setting_text.getGlobalBounds().width +20, sound_setting_text.getPosition().y);
+    // Music Setting
+    sf::Text music_setting_text;
+    music_setting_text.setString("Music On");
+    music_setting_text.setStyle(sf::Text::Bold);
+    music_setting_text.setFillColor(sf::Color::Red);
+    music_setting_text.setOutlineColor(sf::Color::Black);
+    music_setting_text.setOutlineThickness(2);
+    music_setting_text.setFont(myfont);
+    music_setting_text.setCharacterSize(30);
+    music_setting_text.setPosition(windowSize.x * (0.25) - music_setting_text.getGlobalBounds().width/2, 400);
+    Setting music_setting(checkbox_texture, true);
+    music_setting.setPosition(music_setting_text.getPosition().x +music_setting_text.getGlobalBounds().width +20, music_setting_text.getPosition().y);
+
+    // Sounds
+    sf::SoundBuffer laser_buffer;
+    if (!laser_buffer.loadFromFile("Textures/Sounds/laser.wav")) std::cerr << "Could not load laser buffer." << std::endl;
+    sf::Sound laser_sound;
+    laser_sound.setBuffer(laser_buffer);
+    laser_sound.setVolume(25.0f);
+    sf::SoundBuffer explosion_buffer;
+    if (!explosion_buffer.loadFromFile("Textures/Sounds/explosion.wav")) std::cerr << "Could not load explosion buffer." << std::endl;
+    sf::Sound explosion_sound;
+    explosion_sound.setBuffer(explosion_buffer);
+    explosion_sound.setVolume(25.0f);
+    sf::Music music;
+    if (!music.openFromFile("Textures/Sounds/music.ogg")) std::cerr << "Could not load music buffer." << std::endl;
+    music.setLoop(true);
+    music.setVolume(25.0f);
+    music.play();
 
     // Clock
     sf::Clock clock;
@@ -333,12 +375,11 @@ int main()
             }
 
             // -------------Bullet Movement-------------
-            if(sf::Keyboard::isKeyPressed(sf::Keyboard::Space))
+            if(sf::Keyboard::isKeyPressed(sf::Keyboard::Space) && bullet.fired == false)
             {
                 bullet.fired = true; // Bullet has been fired
+                if(sound_setting.getCheck()) laser_sound.play();
             }
-            bullet.animate(elapsed, player.getPlayerPosition());
-
             // ----------Collision Detection-------------
             for(auto &enemy : enemies)
             {
@@ -351,8 +392,10 @@ int main()
                     score += 10; // 10 points for each collision
                     enemyposition = enemy.getEnemyPosition();
                     explosion = true;
+                    if(sound_setting.getCheck()) explosion_sound.play();
                 }
             }
+            bullet.animate(elapsed, player.getPlayerPosition()); // Animate bullet after checking for collision. Otherwise bullet goes through enemy
 
             // ----------Explosion Animation-------------
             if(explosion) // If explosion == true
@@ -440,7 +483,7 @@ int main()
                             settings = true;
                         }
                     }
-                    else if(settings)
+                    else if(settings) // -----When Settings Menu is Open
                     {
                         if(exit_button.getGlobalBounds().contains(mouseclick_pos.x, mouseclick_pos.y)) // if mouselick is on exit button
                         {
@@ -453,7 +496,23 @@ int main()
                         else if(fps_setting.getGlobalBounds().contains(mouseclick_pos.x, mouseclick_pos.y)) // if fps setting is clicked
                         {
                             fps_setting.setCheck(!fps_setting.getCheck());
-                            window_fps = !window_fps;
+                        }
+                        else if(sound_setting.getGlobalBounds().contains(mouseclick_pos.x, mouseclick_pos.y)) // if sound settings is clicked
+                        {
+                            sound_setting.setCheck(!sound_setting.getCheck());
+                        }
+                        else if(music_setting.getGlobalBounds().contains(mouseclick_pos.x, mouseclick_pos.y)) // if music settings is clicked
+                        {
+                            if(music_setting.getCheck())
+                            {
+                                music_setting.setCheck(false);
+                                music.stop();
+                            }
+                            else if(!music_setting.getCheck())
+                            {
+                                music_setting.setCheck(true);
+                                music.play();
+                            }
                         }
                     }
                     else if(pause_on)// If game is paused
@@ -465,6 +524,29 @@ int main()
                         else if(exit_button.getGlobalBounds().contains(mouseclick_pos.x, mouseclick_pos.y)) // if mouselick is on exit button
                         {
                             return 0;
+                        }
+                    }
+                }
+                // ----------Mute - Press M [For all sounds]------------
+                if(event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::M)
+                {
+                    if(sound_setting.getCheck() != music_setting.getCheck())
+                    {
+                        sound_setting.setCheck(false);
+                        music_setting.setCheck(false);
+                    }
+                    else
+                    {
+                        sound_setting.setCheck(!sound_setting.getCheck());
+                        if(music_setting.getCheck())
+                        {
+                            music_setting.setCheck(false);
+                            music.stop();
+                        }
+                        else if(!music_setting.getCheck())
+                        {
+                            music_setting.setCheck(true);
+                            music.play();
                         }
                     }
                 }
@@ -528,7 +610,7 @@ int main()
 
         if(!startmenu) // If not on start menu
         {
-            if(window_fps) window.draw(fps_text); // Draw fps
+            if(fps_setting.getCheck()) window.draw(fps_text); // Draw fps
             bullet.drawBullet(window); // Draw bullet
             player.drawPlayer(window); // Draw player/spacship
             for(auto &enemy : enemies) // Iterate through enemies vector
@@ -556,6 +638,10 @@ int main()
                 window.draw(settings_button);
                 window.draw(fps_setting_text);
                 window.draw(fps_setting);
+                window.draw(sound_setting_text);
+                window.draw(sound_setting);
+                window.draw(music_setting_text);
+                window.draw(music_setting);
             }
             else // If game is being played
             {

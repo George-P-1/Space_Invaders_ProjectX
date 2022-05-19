@@ -32,6 +32,7 @@ void Bullet::drawBullet(sf::RenderWindow &window)
 // Bullet movement
 void Bullet::animate(sf::Time elapsed, sf::Vector2f playerposition)
 {
+    this->isAlive();
     if(!this->fired) // If bullet is not yet fired
     {
         this->setBulletPosition(playerposition);
@@ -40,7 +41,6 @@ void Bullet::animate(sf::Time elapsed, sf::Vector2f playerposition)
     {
         this->move(0, -speedy_ * elapsed.asSeconds());
     }
-    this->isAlive();
 }
 
 // Check if bullet is still in bounds and not collided
