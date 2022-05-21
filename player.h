@@ -22,7 +22,7 @@ public:
     // Draw on window
     void drawPlayer(sf::RenderWindow &window);
     // Move Player
-    void movePlayer(sf::Time elapsed, sf::Keyboard::Key key, sf::Vector2i windowSize);
+    void movePlayer(sf::Time elapsed, sf::Keyboard::Key key, sf::Vector2i windowSize, bool side_teleport);
     // Getter for position
     sf::Vector2f getPlayerPosition();
 

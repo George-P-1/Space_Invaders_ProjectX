@@ -266,9 +266,9 @@ int main()
     fps_setting_text.setOutlineThickness(2);
     fps_setting_text.setFont(myfont);
     fps_setting_text.setCharacterSize(30);
-    fps_setting_text.setPosition(windowSize.x * (0.25) - fps_setting_text.getGlobalBounds().width/2, 200);
+    fps_setting_text.setPosition(windowSize.x * (0.25) - fps_setting_text.getGlobalBounds().width/2, 150);
     Setting fps_setting(checkbox_texture, true);
-    fps_setting.setPosition(fps_setting_text.getPosition().x +fps_setting_text.getGlobalBounds().width +20, fps_setting_text.getPosition().y);
+    fps_setting.setPosition(windowSize.x/2 -75, fps_setting_text.getPosition().y);
     // Sound Setting
     sf::Text sound_setting_text;
     sound_setting_text.setString("Sound On");
@@ -278,9 +278,9 @@ int main()
     sound_setting_text.setOutlineThickness(2);
     sound_setting_text.setFont(myfont);
     sound_setting_text.setCharacterSize(30);
-    sound_setting_text.setPosition(windowSize.x * (0.25) - sound_setting_text.getGlobalBounds().width/2, 300);
+    sound_setting_text.setPosition(windowSize.x * (0.25) - sound_setting_text.getGlobalBounds().width/2, 250);
     Setting sound_setting(checkbox_texture, true);
-    sound_setting.setPosition(fps_setting_text.getPosition().x +sound_setting_text.getGlobalBounds().width +20, sound_setting_text.getPosition().y);
+    sound_setting.setPosition(windowSize.x/2 -75, sound_setting_text.getPosition().y);
     // Music Setting
     sf::Text music_setting_text;
     music_setting_text.setString("Music On");
@@ -290,9 +290,21 @@ int main()
     music_setting_text.setOutlineThickness(2);
     music_setting_text.setFont(myfont);
     music_setting_text.setCharacterSize(30);
-    music_setting_text.setPosition(windowSize.x * (0.25) - music_setting_text.getGlobalBounds().width/2, 400);
+    music_setting_text.setPosition(windowSize.x * (0.25) - music_setting_text.getGlobalBounds().width/2, 350);
     Setting music_setting(checkbox_texture, true);
-    music_setting.setPosition(music_setting_text.getPosition().x +music_setting_text.getGlobalBounds().width +20, music_setting_text.getPosition().y);
+    music_setting.setPosition(windowSize.x/2 -75, music_setting_text.getPosition().y);
+    // Side Teleport Setting
+    sf::Text teleport_setting_text;
+    teleport_setting_text.setString("Side Teleport");
+    teleport_setting_text.setStyle(sf::Text::Bold);
+    teleport_setting_text.setFillColor(sf::Color::Red);
+    teleport_setting_text.setOutlineColor(sf::Color::Black);
+    teleport_setting_text.setOutlineThickness(2);
+    teleport_setting_text.setFont(myfont);
+    teleport_setting_text.setCharacterSize(30);
+    teleport_setting_text.setPosition(windowSize.x * (0.25) - teleport_setting_text.getGlobalBounds().width/2, 450);
+    Setting teleport_setting(checkbox_texture, false);
+    teleport_setting.setPosition(windowSize.x/2 -75, teleport_setting_text.getPosition().y);
 
     // Sounds
     sf::SoundBuffer laser_buffer;
@@ -310,6 +322,13 @@ int main()
     music.setLoop(true);
     music.setVolume(25.0f);
     music.play();
+
+    // Difficulty Increment
+    int maxlevel = 8;
+    int currentlevel = 0; // Increase level every 500 points
+
+    // Side Teleport - Continuous movement of player through sides of window
+    bool side_teleport = true;
 
     // Clock
     sf::Clock clock;
@@ -342,11 +361,11 @@ int main()
             // ------------Player Movement-----------
             if(sf::Keyboard::isKeyPressed(left_key))
             {
-                player.movePlayer(elapsed, left_key, windowSize); // Call move function in Player class
+                player.movePlayer(elapsed, left_key, windowSize, side_teleport); // Call move function in Player class
             }
             if(sf::Keyboard::isKeyPressed(right_key))
             {
-                player.movePlayer(elapsed, right_key, windowSize); // Call move function in Player class
+                player.movePlayer(elapsed, right_key, windowSize, side_teleport); // Call move function in Player class
             }
 
             // -----------Enemy Movement--------------
@@ -396,6 +415,14 @@ int main()
                 }
             }
             bullet.animate(elapsed, player.getPlayerPosition()); // Animate bullet after checking for collision. Otherwise bullet goes through enemy
+
+            // ------------Difficulty Increment-----------
+            if(score/500 == currentlevel+1 && currentlevel <= maxlevel) // If score has reached points required for next level
+            {
+                currentlevel++;
+                enemy_count += 2;
+                enemy_speed += 25;
+            }
 
             // ----------Explosion Animation-------------
             if(explosion) // If explosion == true
@@ -514,6 +541,11 @@ int main()
                                 music.play();
                             }
                         }
+                        else if(teleport_setting.getGlobalBounds().contains(mouseclick_pos.x, mouseclick_pos.y)) // if teleport settings is clicked
+                        {
+                            side_teleport = !side_teleport;
+                            teleport_setting.setCheck(side_teleport);
+                        }
                     }
                     else if(pause_on)// If game is paused
                     {
@@ -549,6 +581,12 @@ int main()
                             music.play();
                         }
                     }
+                }
+                // ------------Side Teleport - Press T------------------
+                if(event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::T)
+                {
+                    side_teleport = !side_teleport;
+                    teleport_setting.setCheck(side_teleport);
                 }
             }
             else if(gameover)
@@ -642,6 +680,8 @@ int main()
                 window.draw(sound_setting);
                 window.draw(music_setting_text);
                 window.draw(music_setting);
+                window.draw(teleport_setting_text);
+                window.draw(teleport_setting);
             }
             else // If game is being played
             {

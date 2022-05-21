@@ -47,18 +47,40 @@ void Player::exact_bounds(sf::FloatRect player_bounds, sf::Vector2i windowSize)
 }
 
 // Move Player
-void Player::movePlayer(sf::Time elapsed, sf::Keyboard::Key key, sf::Vector2i windowSize)
+void Player::movePlayer(sf::Time elapsed, sf::Keyboard::Key key, sf::Vector2i windowSize, bool side_teleport)
 {
     sf::FloatRect player_bounds = this->getGlobalBounds();
-    if(key == this->left_key_ && player_bounds.left > 0.0) // Dont exit screen on left side
+    if(!side_teleport)
     {
-        this->move(-speedx_ * elapsed.asSeconds(), 0); // Move towards left
+        if(key == this->left_key_ && player_bounds.left > 0.0) // Dont exit screen on left side
+        {
+            this->move(-speedx_ * elapsed.asSeconds(), 0); // Move towards left
+        }
+        if(key == this->right_key_ && player_bounds.left < windowSize.x - player_bounds.width) // Dont exit screen on righ side
+        {
+            this->move(speedx_ * elapsed.asSeconds(), 0); // Move towards right
+        }
+        this->exact_bounds(player_bounds, windowSize);
     }
-    if(key == this->right_key_ && player_bounds.left < windowSize.x - player_bounds.width) // Dont exit screen on righ side
+    else
     {
-        this->move(speedx_ * elapsed.asSeconds(), 0); // Move towards right
+        if(key == this->left_key_ && player_bounds.left +player_bounds.width/2 > 0.0) // When left half of spaceship is in the left side of window
+        {
+            if(player_bounds.contains(0 -player_bounds.width*(0.75) +50, fixedy_)) // +5 for making condition true
+            {
+                this->setPosition(windowSize.x +this->getGlobalBounds().width/2, fixedy_);
+            }
+            this->move(-speedx_ * elapsed.asSeconds(), 0); // Move towards left
+        }
+        if(key == this->right_key_ && player_bounds.left < windowSize.x - player_bounds.width/2) // When right half of spaceship is in right side
+        {
+            if(player_bounds.contains(windowSize.x +player_bounds.width*(0.75) -50, fixedy_))
+            {
+                this->setPosition(0 -this->getGlobalBounds().width/2, fixedy_);
+            }
+            this->move(speedx_ * elapsed.asSeconds(), 0); // Move towards right
+        }
     }
-    this->exact_bounds(player_bounds, windowSize);
 }
 
 // Getter for fixedy
