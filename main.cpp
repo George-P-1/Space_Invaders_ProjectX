@@ -320,8 +320,18 @@ int main()
     sf::Music music;
     if (!music.openFromFile("Textures/Sounds/music.ogg")) std::cerr << "Could not load music buffer." << std::endl;
     music.setLoop(true);
-    music.setVolume(25.0f);
+    music.setVolume(15.0f);
     music.play();
+    sf::SoundBuffer levelup_buffer;
+    if (!levelup_buffer.loadFromFile("Textures/Sounds/levelup.wav")) std::cerr << "Could not load levelup buffer." << std::endl;
+    sf::Sound levelup_sound;
+    levelup_sound.setBuffer(levelup_buffer);
+    levelup_sound.setVolume(25.0f);
+    sf::SoundBuffer gameover_buffer;
+    if (!gameover_buffer.loadFromFile("Textures/Sounds/gameover.wav")) std::cerr << "Could not load gameover buffer." << std::endl;
+    sf::Sound gameover_sound;
+    gameover_sound.setBuffer(gameover_buffer);
+    gameover_sound.setVolume(25.0f);
 
     // Difficulty Increment
     int maxlevel = 8;
@@ -374,6 +384,7 @@ int main()
                 if(enemies[i].escape)// If escaped then ------------Game Over------------------
                 {
                     gameover = true;
+                    if(sound_setting.getCheck()) gameover_sound.play();
                 }
                 if(!enemies[i].alive) // Check if enemy is still shootable/alive. Enemy is not alive
                 {
@@ -422,6 +433,7 @@ int main()
                 currentlevel++;
                 enemy_count += 2;
                 enemy_speed += 25;
+                if(sound_setting.getCheck()) levelup_sound.play();
             }
 
             // ----------Explosion Animation-------------
