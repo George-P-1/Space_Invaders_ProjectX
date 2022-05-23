@@ -66,15 +66,15 @@ void Player::movePlayer(sf::Time elapsed, sf::Keyboard::Key key, sf::Vector2i wi
     {
         if(key == this->left_key_ && player_bounds.left +player_bounds.width/2 > 0.0) // When left half of spaceship is in the left side of window
         {
-            if(player_bounds.contains(0 -player_bounds.width*(0.75) +50, fixedy_)) // +5 for making condition true
+            if(player_bounds.contains(0 -player_bounds.width/4, fixedy_))
             {
-                this->setPosition(windowSize.x +this->getGlobalBounds().width/2, fixedy_);
+                this->setPosition(windowSize.x -this->getGlobalBounds().width/2, fixedy_);
             }
             this->move(-speedx_ * elapsed.asSeconds(), 0); // Move towards left
         }
         if(key == this->right_key_ && player_bounds.left < windowSize.x - player_bounds.width/2) // When right half of spaceship is in right side
         {
-            if(player_bounds.contains(windowSize.x +player_bounds.width*(0.75) -50, fixedy_))
+            if(player_bounds.contains(windowSize.x +player_bounds.width/4 , fixedy_))
             {
                 this->setPosition(0 -this->getGlobalBounds().width/2, fixedy_);
             }
