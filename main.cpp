@@ -5,6 +5,7 @@
 #include <time.h>
 #include <vector>
 #include <SFML/Audio.hpp>
+#include <fstream>
 
 #include <player.h>
 #include <enemy.h>
@@ -64,6 +65,14 @@ void makeEnemy(sf::Texture &enemy_texture, sf::Vector2i windowSize, int enemy_sp
     enemy.setyLimit(player.getPlayerPosition().y);
     enemy.setVshift(52); // Change value to change difficulty // Ideal Values(factors of 416 - 16, 26, 32, 52, 104)
     enemies.emplace_back(enemy);
+}
+
+void write_highscore(int highscore)
+{
+    std::ofstream ofile("highscore.txt");
+    if (!ofile.is_open()) std::cout << "File was not opened!" << std::endl;
+    ofile << highscore;
+    ofile.close(); // Close file
 }
 
 int main()
@@ -186,9 +195,9 @@ int main()
     bool gameover = false;
     sf::Texture gameover_texture;
     if(!gameover_texture.loadFromFile("Textures/gameover.png")) std::cerr << "Could not load gameover texture." << std::endl;
-    sf::Sprite gamover_background;
-    gamover_background.setTexture(gameover_texture);
-    gamover_background.setPosition(0, 0);
+    sf::Sprite gameover_background;
+    gameover_background.setTexture(gameover_texture);
+    gameover_background.setPosition(0, 0);
 
     // Play Again
     sf::Text playagain_button;
@@ -314,6 +323,13 @@ int main()
     teleport_setting_text.setPosition(windowSize.x * (0.25) - teleport_setting_text.getGlobalBounds().width/2, 450);
     Setting teleport_setting(checkbox_texture, false);
     teleport_setting.setPosition(windowSize.x/2 -75, teleport_setting_text.getPosition().y);
+    // Help Box
+    sf::Texture help_t;
+    if(!help_t.loadFromFile("Textures/help.png")) std::cerr << "Could not load help texture." << std::endl;
+    sf::Sprite helpbox;
+    helpbox.setTexture(help_t);
+    helpbox.setScale(0.55, 0.55);
+    helpbox.setPosition(windowSize.x/2 , 60);
 
     // Sounds
     sf::SoundBuffer laser_buffer;
@@ -348,6 +364,22 @@ int main()
 
     // Side Teleport - Continuous movement of player through sides of window
     bool side_teleport = false;
+
+    // High Score File and Text
+    std::ifstream ifile("highscore.txt");
+    if (!ifile.is_open()) std::cout << "File was not opened!" << std::endl;
+    int highscore = 0;
+    ifile >> highscore;
+    ifile.close(); // Close file
+    sf::Text highscore_text;
+    highscore_text.setString("Highscore: " + std::to_string(highscore));
+    highscore_text.setStyle(sf::Text::Bold);
+    highscore_text.setFillColor(sf::Color::Red);
+    highscore_text.setOutlineColor(sf::Color::Black);
+    highscore_text.setOutlineThickness(1);
+    highscore_text.setFont(myfont);
+    highscore_text.setCharacterSize(30);
+    highscore_text.setPosition(windowSize.x/2 - highscore_text.getGlobalBounds().width/2, 50);
 
     // Clock
     sf::Clock clock;
@@ -394,6 +426,12 @@ int main()
                 {
                     gameover = true;
                     if(sound_setting.getCheck()) gameover_sound.play();
+                    // Check if new highscore
+                    if(score > highscore)
+                    {
+                        highscore = score;
+                        highscore_text.setString("Highscore: " + std::to_string(highscore));
+                    }
                 }
                 if(!enemies[i].alive) // Check if enemy is still shootable/alive. Enemy is not alive
                 {
@@ -493,6 +531,7 @@ int main()
         // ------------Quit - Press Q------------
         if(sf::Keyboard::isKeyPressed(sf::Keyboard::Q))
         {
+            write_highscore(highscore);
             return 0; // return 0 means program worked how it was supposed to.
         }
         // check all the window's events that were triggered since the last iteration of the loop
@@ -539,6 +578,7 @@ int main()
                     {
                         if(exit_button.getGlobalBounds().contains(mouseclick_pos.x, mouseclick_pos.y)) // if mouselick is on exit button
                         {
+                            write_highscore(highscore);
                             return 0;
                         }
                         else if(settings_button.getGlobalBounds().contains(mouseclick_pos.x, mouseclick_pos.y)) // If settings button is clicked
@@ -580,6 +620,7 @@ int main()
                         }
                         else if(exit_button.getGlobalBounds().contains(mouseclick_pos.x, mouseclick_pos.y)) // if mouselick is on exit button
                         {
+                            write_highscore(highscore);
                             return 0;
                         }
                     }
@@ -636,6 +677,7 @@ int main()
                     }
                     else if(exit_button.getGlobalBounds().contains(mouseclick_pos.x, mouseclick_pos.y)) // if mouselick is on exit button
                     {
+                        write_highscore(highscore);
                         return 0;
                     }
                 }
@@ -663,6 +705,7 @@ int main()
                     }
                     else if(quit_button.getGlobalBounds().contains(mousepos.x, mousepos.y)) // if quit button is clicked
                     {
+                        write_highscore(highscore);
                         return 0;
                     }
                 }
@@ -694,9 +737,10 @@ int main()
             else if(gameover) // If game over
             {
                 window.draw(overlay); // Draw overlay
-                window.draw(gamover_background); // Draw gameover sprite
+                window.draw(gameover_background); // Draw gameover sprite
                 window.draw(playagain_button); // Draw play again prompt
                 window.draw(exit_button); // Draw exit button
+                window.draw(highscore_text); // Draw the high score
             }
             else if(settings) // if settings is true
             {
@@ -711,6 +755,7 @@ int main()
                 window.draw(music_setting);
                 window.draw(teleport_setting_text);
                 window.draw(teleport_setting);
+                window.draw(helpbox);
             }
             else // If game is being played
             {
@@ -731,6 +776,5 @@ int main()
         // end the current frame
         window.display();
     }
-
     return 0;
 }
