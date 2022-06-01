@@ -4,10 +4,13 @@ CONFIG -= app_bundle
 CONFIG -= qt
 
 SOURCES += \
+        animation.cpp \
         bullet.cpp \
+        destroyer.cpp \
         enemy.cpp \
         main.cpp \
-        player.cpp
+        player.cpp \
+        ship.cpp
 
 # ----------CHANGE THE PATH TO SFML LIBRARY ACCORDINGLY-----------------------
 
@@ -21,6 +24,9 @@ CONFIG(debug, debug|release){
 }
 
 HEADERS += \
+    animation.h \
     bullet.h \
+    destroyer.h \
     enemy.h \
-    player.h
+    player.h \
+    ship.h

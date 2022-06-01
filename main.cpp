@@ -6,16 +6,23 @@
 #include <vector>
 #include <SFML/Audio.hpp>
 #include <fstream>
+#include <memory>
 
 #include <player.h>
 #include <enemy.h>
 #include <bullet.h>
+#include <animation.h>
+#include <ship.h>
+#include <destroyer.h>
 
 // Setting class
 class Setting : public sf::Sprite
 {
 private:
     bool check;
+
+public:
+    sf::Text text;
 
 public:
     // Constructor
@@ -42,29 +49,53 @@ private:
     // Set texture rect
     void setTextureBox()
     {
-        if(check == true)
-        {
-            this->setTextureRect(sf::IntRect(0, 0, 68, 64));
-        }
-        else
-        {
-            this->setTextureRect(sf::IntRect(0, 68, 68, 64));
-        }
+        if(check) this->setTextureRect(sf::IntRect(0, 0, 68, 64));
+        else this->setTextureRect(sf::IntRect(0, 68, 68, 64));
     }
 };
 
-void makeEnemy(sf::Texture &enemy_texture, sf::Vector2i windowSize, int enemy_speed, Player &player, std::vector<Enemy> &enemies)
+void makeEnemyShip(sf::Texture &enemy_texture, sf::Vector2i windowSize, int enemy_speed,
+                   Player &player, std::vector<std::unique_ptr<Enemy>> &enemies)
 {
-    Enemy enemy(enemy_texture, windowSize);
+//    Ship ship(enemy_texture, windowSize);
+    std::unique_ptr<Enemy> enemy = std::make_unique<Ship>(enemy_texture, windowSize);
+//    auto enemy = std::make_unique<Ship>(enemy_texture, windowSize); // Alternative
+
+    // Dynamic cast
+    Ship *ship = dynamic_cast<Ship*>(enemy.get());
 
     // Set speed and random direction
     bool direction = std::rand() % 2;
-    if(direction) enemy.setSpeed(enemy_speed);
-    else enemy.setSpeed(-enemy_speed);
+    if(direction) ship->setSpeed(enemy_speed, 0);
+    else ship->setSpeed(-enemy_speed, 0);
 
-    enemy.setyLimit(player.getPlayerPosition().y);
-    enemy.setVshift(52); // Change value to change difficulty // Ideal Values(factors of 416 - 16, 26, 32, 52, 104)
-    enemies.emplace_back(enemy);
+    ship->setyLimit(player.getPlayerPosition().y);
+    ship->setVshift(52); // Change value to change difficulty // Ideal Values(factors of 416 - 16, 26, 32, 52, 104)
+
+    enemies.emplace_back(std::move(enemy)); // std::move to pass ownership to vector
+}
+
+void makeEnemyDestroyer(sf::Texture &enemy_texture, sf::Vector2i windowSize, int speed,
+                        Player &player, std::vector<std::unique_ptr<Enemy>> &enemies)
+{
+    auto destroyer = std::make_unique<Destroyer>(enemy_texture, windowSize); // Alternative
+    destroyer->setSpeed(0, speed);
+    destroyer->rotation_angle = 100;
+
+    destroyer->setyLimit(player.getPlayerPosition().y);
+    enemies.emplace_back(std::move(destroyer));
+}
+
+void makeText(sf::Text &text, sf::Font &font, sf::String string, sf::Uint32 style, sf::Color fillcolor, sf::Color outlinecolor,
+              float outlinethickness, int charsize)
+{
+    text.setFont(font);
+    text.setString(string);
+    text.setStyle(style);
+    text.setFillColor(fillcolor);
+    text.setOutlineColor(outlinecolor);
+    text.setOutlineThickness(outlinethickness);
+    text.setCharacterSize(charsize);
 }
 
 void write_highscore(int highscore)
@@ -93,10 +124,7 @@ int main()
     int window_fps = 60;
     window.setFramerateLimit(window_fps);
     sf::Text fps_text;
-    fps_text.setString(std::to_string(window_fps));
-    fps_text.setFillColor(sf::Color::Green);
-    fps_text.setFont(myfont);
-    fps_text.setCharacterSize(20);
+    makeText(fps_text, myfont, std::to_string(window_fps), sf::Text::Regular, sf::Color::Green, sf::Color::Black, 0, 20);
     fps_text.setPosition(windowSize.x - fps_text.getGlobalBounds().width -5, 0); // -5 for better visibility
 
     // Set Background
@@ -109,14 +137,8 @@ int main()
     // ------Score Text----
     int score = 0;
     sf::Text score_text;
-    score_text.setString("Score: " + std::to_string(score));
-    score_text.setStyle(sf::Text::Bold);
-    score_text.setFillColor(sf::Color::Green);
-    score_text.setOutlineColor(sf::Color::Black);
-    score_text.setOutlineThickness(1);
-    score_text.setFont(myfont);
-    score_text.setCharacterSize(25);
-    score_text.setPosition(0 +5, 0); // +5 for better visibility
+    makeText(score_text, myfont, "Score: " + std::to_string(score), sf::Text::Bold, sf::Color::Green, sf::Color::Black, 1, 25);
+    score_text.setPosition(5, 0); // +5 for better visibility
 
     // Grey Overlay for Pause/Play Feature
     sf::Texture overlay_texture;
@@ -152,21 +174,26 @@ int main()
     sf::Texture player_texture;
     if(!player_texture.loadFromFile("Textures/player.png")) std::cerr << "Could not load spaceship/player texture." << std::endl;
     Player player(player_texture, windowSize);
-    player.setSpeed(400);
+    player.setSpeed(500);
 
     // Random Seed
     std::srand(std::time(NULL)); // For random spawn location of enemies
+
     // Enemy
+    std::vector<std::unique_ptr<Enemy>> enemies;
+    // Ship Enemy
     sf::Texture enemy_texture;
     if(!enemy_texture.loadFromFile("Textures/enemy.png")) std::cerr << "Could not load enemy texture." << std::endl;
-    // Enemies
-    int enemy_count = 8;
-    int enemy_speed = 250; // Set enemy speed
-    std::vector<Enemy> enemies;
-    for(int i = 0; i < enemy_count; i++) // Initialize with fixed number of enemies
+    int enemyShip_count = 8;
+    int enemyShip_speed = 250; // Set enemy speed
+    for(int i = 0; i < enemyShip_count; i++) // Initialize with fixed number of enemies
     {
-        makeEnemy(enemy_texture, windowSize, enemy_speed, player, enemies);
+        makeEnemyShip(enemy_texture, windowSize, enemyShip_speed, player, enemies);
     }
+    // Destroyer Enemy
+    sf::Texture destroyer_texture;
+    if(!destroyer_texture.loadFromFile("Textures/destroyer.png")) std::cerr << "Could not load destroyer texture." << std::endl;
+    int score_spawn = 0; // Score value for when destroyer was spawned
 
     // Bullet
     sf::Texture bullet_texture;
@@ -174,22 +201,13 @@ int main()
     Bullet bullet(bullet_texture, player.getPlayerPosition());
     bullet.setSpeed(500); // Set bullet speed
 
-    // Explosion
-    sf::Texture explosion_texture;
-    if(!explosion_texture.loadFromFile("Textures/explosion.png")) std::cerr << "Could not load explosion texture." << std::endl;
-    sf::Sprite explosion_sprite;
-    explosion_sprite.setTexture(explosion_texture);
-    int spritedim = 192; // Dimension of one sprite in sprite sheet. 192x192
-    explosion_sprite.setTextureRect(sf::IntRect(0, 0, spritedim, spritedim));
-    explosion_sprite.setScale((float)1/3, (float)1/3);
-    sf::Vector2f enemyposition;
-    bool explosion = false;
-    float total_time = 0;
-    float switch_time = 0.05; // 20 fps. Will play all 10 frames of sprite sheet in 0.5 second.
-    int totalrow = 2;
-    int totalcolumn = 5;
-    int currentrow = 1;
-    int currentcolumn = 1;
+    // Explosion Animation
+    // Load Textures
+    sf::Texture explosion1_texture;
+    if(!explosion1_texture.loadFromFile("Textures/explosion1.png")) std::cerr << "Could not load explosion1 texture." << std::endl;
+    sf::Texture explosion2_texture;
+    if(!explosion2_texture.loadFromFile("Textures/explosion2.png")) std::cerr << "Could not load explosion2 texture." << std::endl;
+    std::vector<Animation> animations;
 
     // Game Over
     bool gameover = false;
@@ -201,13 +219,7 @@ int main()
 
     // Play Again
     sf::Text playagain_button;
-    playagain_button.setString("PLAY AGAIN");
-    playagain_button.setStyle(sf::Text::Bold | sf::Text::Underlined);
-    playagain_button.setFillColor(sf::Color::Red);
-    playagain_button.setOutlineColor(sf::Color::Black);
-    playagain_button.setOutlineThickness(1.5);
-    playagain_button.setFont(myfont);
-    playagain_button.setCharacterSize(50);
+    makeText(playagain_button, myfont, "PLAY AGAIN", sf::Text::Bold | sf::Text::Underlined, sf::Color::Red, sf::Color::Black, 1.5, 50);
     playagain_button.setPosition(windowSize.x/2 - playagain_button.getGlobalBounds().width/2, 500);
 
     // Start Menu
@@ -219,41 +231,19 @@ int main()
     bool startmenu = true;
     // Start Button
     sf::Text start_button;
-    start_button.setString("START");
-    start_button.setStyle(sf::Text::Bold | sf::Text::Underlined);
-    start_button.setFillColor(sf::Color::Yellow);
-    start_button.setOutlineColor(sf::Color::Red);
-    start_button.setOutlineThickness(2);
-    start_button.setFont(myfont);
-    start_button.setCharacterSize(50);
+    makeText(start_button, myfont, "START", sf::Text::Bold | sf::Text::Underlined, sf::Color::Yellow, sf::Color::Red, 2, 50);
     start_button.setPosition(windowSize.x/4 - start_button.getGlobalBounds().width/2, 450);
+
     sf::Text start_help;
-    start_help.setString("[Press ENTER]");
-    start_help.setStyle(sf::Text::Bold);
-    start_help.setFillColor(sf::Color::Yellow);
-    start_help.setOutlineColor(sf::Color::Red);
-    start_help.setOutlineThickness(2);
-    start_help.setFont(myfont);
-    start_help.setCharacterSize(25);
+    makeText(start_help, myfont, "[Press ENTER]", sf::Text::Bold, sf::Color::Yellow, sf::Color::Red, 2, 25);
     start_help.setPosition(windowSize.x/4 - start_help.getGlobalBounds().width/2, 520);
+
     // Quit Button
     sf::Text quit_button;
-    quit_button.setString("QUIT");
-    quit_button.setStyle(sf::Text::Bold | sf::Text::Underlined);
-    quit_button.setFillColor(sf::Color::Yellow);
-    quit_button.setOutlineColor(sf::Color::Red);
-    quit_button.setOutlineThickness(2);
-    quit_button.setFont(myfont);
-    quit_button.setCharacterSize(50);
+    makeText(quit_button, myfont, "QUIT", sf::Text::Bold | sf::Text::Underlined, sf::Color::Yellow, sf::Color::Red, 2, 50);
     quit_button.setPosition(windowSize.x * (0.75) - quit_button.getGlobalBounds().width/2, 450);
     sf::Text quit_help;
-    quit_help.setString("[Press Q]");
-    quit_help.setStyle(sf::Text::Bold);
-    quit_help.setFillColor(sf::Color::Yellow);
-    quit_help.setOutlineColor(sf::Color::Red);
-    quit_help.setOutlineThickness(2);
-    quit_help.setFont(myfont);
-    quit_help.setCharacterSize(25);
+    makeText(quit_help, myfont, "[Press Q]", sf::Text::Bold, sf::Color::Yellow, sf::Color::Red, 2, 25);
     quit_help.setPosition(windowSize.x * (0.75) - quit_help.getGlobalBounds().width/2, 520);
 
     // Exit Button (With sprite)
@@ -276,53 +266,25 @@ int main()
     sf::Texture checkbox_texture;
     if(!checkbox_texture.loadFromFile("Textures/Buttons/checkbox.png")) std::cerr << "Could not load checkbox texture." << std::endl;
     // FPS Setting
-    sf::Text fps_setting_text;
-    fps_setting_text.setString("Show FPS");
-    fps_setting_text.setStyle(sf::Text::Bold);
-    fps_setting_text.setFillColor(sf::Color::Red);
-    fps_setting_text.setOutlineColor(sf::Color::Black);
-    fps_setting_text.setOutlineThickness(2);
-    fps_setting_text.setFont(myfont);
-    fps_setting_text.setCharacterSize(30);
-    fps_setting_text.setPosition(windowSize.x * (0.25) - fps_setting_text.getGlobalBounds().width/2, 150);
     Setting fps_setting(checkbox_texture, true);
-    fps_setting.setPosition(windowSize.x/2 -75, fps_setting_text.getPosition().y);
+    makeText(fps_setting.text, myfont, "Show FPS", sf::Text::Bold, sf::Color::Red, sf::Color::Black, 2, 30);
+    fps_setting.text.setPosition(windowSize.x * (0.25) - fps_setting.text.getGlobalBounds().width/2, 150);
+    fps_setting.setPosition(windowSize.x/2 -75, fps_setting.text.getPosition().y);
     // Sound Setting
-    sf::Text sound_setting_text;
-    sound_setting_text.setString("Sound On");
-    sound_setting_text.setStyle(sf::Text::Bold);
-    sound_setting_text.setFillColor(sf::Color::Red);
-    sound_setting_text.setOutlineColor(sf::Color::Black);
-    sound_setting_text.setOutlineThickness(2);
-    sound_setting_text.setFont(myfont);
-    sound_setting_text.setCharacterSize(30);
-    sound_setting_text.setPosition(windowSize.x * (0.25) - sound_setting_text.getGlobalBounds().width/2, 250);
     Setting sound_setting(checkbox_texture, true);
-    sound_setting.setPosition(windowSize.x/2 -75, sound_setting_text.getPosition().y);
+    makeText(sound_setting.text, myfont, "Sound On", sf::Text::Bold, sf::Color::Red, sf::Color::Black, 2, 30);
+    sound_setting.text.setPosition(windowSize.x * (0.25) - sound_setting.text.getGlobalBounds().width/2, 250);
+    sound_setting.setPosition(windowSize.x/2 -75, sound_setting.text.getPosition().y);
     // Music Setting
-    sf::Text music_setting_text;
-    music_setting_text.setString("Music On");
-    music_setting_text.setStyle(sf::Text::Bold);
-    music_setting_text.setFillColor(sf::Color::Red);
-    music_setting_text.setOutlineColor(sf::Color::Black);
-    music_setting_text.setOutlineThickness(2);
-    music_setting_text.setFont(myfont);
-    music_setting_text.setCharacterSize(30);
-    music_setting_text.setPosition(windowSize.x * (0.25) - music_setting_text.getGlobalBounds().width/2, 350);
     Setting music_setting(checkbox_texture, true);
-    music_setting.setPosition(windowSize.x/2 -75, music_setting_text.getPosition().y);
+    makeText(music_setting.text, myfont, "Music On", sf::Text::Bold, sf::Color::Red, sf::Color::Black, 2, 30);
+    music_setting.text.setPosition(windowSize.x * (0.25) - music_setting.text.getGlobalBounds().width/2, 350);
+    music_setting.setPosition(windowSize.x/2 -75, music_setting.text.getPosition().y);
     // Side Teleport Setting
-    sf::Text teleport_setting_text;
-    teleport_setting_text.setString("Side Teleport");
-    teleport_setting_text.setStyle(sf::Text::Bold);
-    teleport_setting_text.setFillColor(sf::Color::Red);
-    teleport_setting_text.setOutlineColor(sf::Color::Black);
-    teleport_setting_text.setOutlineThickness(2);
-    teleport_setting_text.setFont(myfont);
-    teleport_setting_text.setCharacterSize(30);
-    teleport_setting_text.setPosition(windowSize.x * (0.25) - teleport_setting_text.getGlobalBounds().width/2, 450);
     Setting teleport_setting(checkbox_texture, false);
-    teleport_setting.setPosition(windowSize.x/2 -75, teleport_setting_text.getPosition().y);
+    makeText(teleport_setting.text, myfont, "Side Teleport", sf::Text::Bold, sf::Color::Red, sf::Color::Black, 2, 30);
+    teleport_setting.text.setPosition(windowSize.x * (0.25) - teleport_setting.text.getGlobalBounds().width/2, 450);
+    teleport_setting.setPosition(windowSize.x/2 -75, teleport_setting.text.getPosition().y);
     // Help Box
     sf::Texture help_t;
     if(!help_t.loadFromFile("Textures/help.png")) std::cerr << "Could not load help texture." << std::endl;
@@ -372,13 +334,7 @@ int main()
     ifile >> highscore;
     ifile.close(); // Close file
     sf::Text highscore_text;
-    highscore_text.setString("Highscore: " + std::to_string(highscore));
-    highscore_text.setStyle(sf::Text::Bold);
-    highscore_text.setFillColor(sf::Color::Red);
-    highscore_text.setOutlineColor(sf::Color::Black);
-    highscore_text.setOutlineThickness(1);
-    highscore_text.setFont(myfont);
-    highscore_text.setCharacterSize(30);
+    makeText(highscore_text, myfont, "Highscore: " + std::to_string(highscore), sf::Text::Bold, sf::Color::Red, sf::Color::Black, 1, 30);
     highscore_text.setPosition(windowSize.x/2 - highscore_text.getGlobalBounds().width/2, 50);
 
     // Clock
@@ -389,6 +345,9 @@ int main()
     {
         // -----Delta Time----
         sf::Time elapsed = clock.restart();
+
+        // Framerate
+        window_fps = 1 / elapsed.asSeconds(); // To check framerate
 
         // ------Show Score----
         score_text.setString("Score: " + std::to_string(score));
@@ -422,7 +381,7 @@ int main()
             // -----------Enemy Movement--------------
             for(int i = 0; i < (int)enemies.size(); i++)
             {
-                if(enemies[i].escape)// If escaped then ------------Game Over------------------
+                if(enemies[i]->escape)// If escaped then ------------Game Over------------------
                 {
                     gameover = true;
                     if(sound_setting.getCheck()) gameover_sound.play();
@@ -433,22 +392,42 @@ int main()
                         highscore_text.setString("Highscore: " + std::to_string(highscore));
                     }
                 }
-                if(!enemies[i].alive) // Check if enemy is still shootable/alive. Enemy is not alive
+                // Dynamic cast to check which class the enemy is
+                Ship *ship = dynamic_cast<Ship*>(enemies[i].get());
+                Destroyer *destroyer = dynamic_cast<Destroyer*>(enemies[i].get());
+                if(!enemies[i]->alive) // Check if enemy is still shootable/alive. Enemy is not alive
                 {
                     enemies.erase(enemies.begin() + i);
                 }
-                else
+                else // Animate alive enemies
                 {
-                    enemies[i].animate(elapsed, windowSize); // Animate alive enemies
+                    if(ship != nullptr) // If enemy is ship
+                    {
+                        ship->animateShip(elapsed, windowSize);
+                    }
+                    else if(destroyer != nullptr) // If enemy is destroyer
+                    {
+                        bullet.setSpeed(800); // Increase speed
+                        destroyer->animateDestroyer(elapsed);
+                    }
+                    else
+                    {
+                        std::cout << "IMPOSSIBLE!!!\n";
+                    }
                 }
             }
             // Enemy respawn
-            if((int)enemies.size() != enemy_count)
+            if((int)enemies.size() != enemyShip_count)
             {
-                for(int i = 0; i < enemy_count - (int)enemies.size(); i++)
+                for(int i = 0; i < enemyShip_count - (int)enemies.size(); i++)
                 {
-                    makeEnemy(enemy_texture, windowSize, enemy_speed, player, enemies);
+                    makeEnemyShip(enemy_texture, windowSize, enemyShip_speed, player, enemies);
                 }
+            }
+            if(score % 100 == 0 && score != score_spawn)
+            {
+                score_spawn = score;
+                makeEnemyDestroyer(destroyer_texture, windowSize, 40, player, enemies); // speed = 40
             }
 
             // -------------Bullet Movement-------------
@@ -458,18 +437,56 @@ int main()
                 if(sound_setting.getCheck()) laser_sound.play();
             }
             // ----------Collision Detection-------------
-            for(auto &enemy : enemies)
+            for(int i = 0; i < (int)enemies.size(); i++)
             {
                 sf::FloatRect bulletbounds = bullet.getGbounds();
-                if(enemy.isCollided(bulletbounds))
+
+                Ship *ship = dynamic_cast<Ship*>(enemies[i].get());
+                Destroyer *destroyer = dynamic_cast<Destroyer*>(enemies[i].get());
+                if(ship != nullptr) // If enemy is ship
                 {
-                    enemy.alive = false;
-//                    bullet.alive = false; // in case of rapid bullet implementation
-                    bullet.fired = false;
-                    score += 10; // 10 points for each collision
-                    enemyposition = enemy.getEnemyPosition();
-                    explosion = true;
-                    if(sound_setting.getCheck()) explosion_sound.play();
+                    if(ship->isCollided(bulletbounds))
+                    {
+                        ship->alive = false;
+//                        bullet.alive = false; // in case of rapid bullet implementation
+                        bullet.fired = false;
+                        score += 10; // 10 points for each collision
+                        // Create animation
+                        Animation ship_explosion(explosion1_texture, 1);
+                        ship_explosion.enemyposition = ship->getPosition();
+                        ship_explosion.explosion = true;
+                        animations.emplace_back(ship_explosion);
+                        if(sound_setting.getCheck()) explosion_sound.play();
+                    }
+                }
+                else if(destroyer != nullptr) // If enemy is destroyer
+                {
+                    if(destroyer->isCollided(bulletbounds))
+                    {
+                        destroyer->damage += 1;
+                        bullet.fired = false;
+                        if(sound_setting.getCheck()) explosion_sound.play();
+                    }
+                    if(destroyer->damage == 3)
+                    {
+                        bullet.setSpeed(500); // Set back to default
+
+                        destroyer->alive = false;
+//                        bullet.alive = false; // in case of rapid bullet implementation
+                        bullet.fired = false;
+                        score += 10; // 10 points for each collision
+                        // Create animation
+                        Animation destroyer_explosion(explosion2_texture, 2);
+                        destroyer_explosion.enemyposition = sf::Vector2f(destroyer->getPosition().x-destroyer->getGlobalBounds().width/2,
+                                                             destroyer->getPosition().y-destroyer->getGlobalBounds().height/2);
+                        destroyer_explosion.explosion = true;
+                        animations.emplace_back(destroyer_explosion);
+                        if(sound_setting.getCheck()) explosion_sound.play();
+                    }
+                }
+                else
+                {
+                    std::cout << "IMPOSSIBLE!!!\n";
                 }
             }
             bullet.animate(elapsed, player.getPlayerPosition()); // Animate bullet after checking for collision. Otherwise bullet goes through enemy
@@ -478,36 +495,17 @@ int main()
             if(score/500 == currentlevel+1 && currentlevel < maxlevel) // If score has reached points required for next level
             {
                 currentlevel++;
-                enemy_count += 2;
-                enemy_speed += 25;
+                enemyShip_count += 2;
+                enemyShip_speed += 25;
                 if(sound_setting.getCheck()) levelup_sound.play();
             }
 
             // ----------Explosion Animation-------------
-            if(explosion) // If explosion == true
+            for(auto &animation : animations)
             {
-                // Set animation position
-                explosion_sprite.setPosition(enemyposition.x, enemyposition.y); // Center animation wrt to enemy sprite
-
-                total_time += elapsed.asSeconds();
-
-                if(total_time >= switch_time)
+                if(animation.explosion) // If explosion == true
                 {
-                    total_time -= switch_time; // Almost same as total_time = 0;. In the long run this will prevent errors caused by approximations.
-                    explosion_sprite.setTextureRect(sf::IntRect((currentcolumn-1) * spritedim, (currentrow-1) * spritedim, spritedim, spritedim));
-                    explosion_sprite.setScale((float)1/3, (float)1/3); // 192 / 3 = 64
-                    currentcolumn++;
-                    if(currentcolumn == totalcolumn && currentrow != totalrow) // After animating first row of sprite sheet
-                    {
-                        currentrow++;
-                        currentcolumn = 1;
-                    }
-                    if(currentrow >= totalrow && currentcolumn >= totalcolumn) // If one animation is done
-                    {
-                        explosion = false;
-                        currentcolumn = 1;
-                        currentrow = 1;
-                    }
+                    animation.playAnimation(elapsed);
                 }
             }
         }
@@ -519,12 +517,12 @@ int main()
             score = 0;
             currentlevel = 1; // Reset difficulty level
             // Reset to default values
-            enemy_count = 8;
-            enemy_speed = 250;
+            enemyShip_count = 8;
+            enemyShip_speed = 250;
             enemies.clear(); // Clear all enemies
-            for(int i = 0; i < enemy_count; i++) // Initialize with fixed number of enemies
+            for(int i = 0; i < enemyShip_count; i++) // Initialize with fixed number of enemies
             {
-                makeEnemy(enemy_texture, windowSize, enemy_speed, player, enemies);
+                makeEnemyShip(enemy_texture, windowSize, enemyShip_speed, player, enemies);
             }
         }
 
@@ -625,29 +623,6 @@ int main()
                         }
                     }
                 }
-                // ----------Mute - Press M [For all sounds]------------
-                if(event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::M)
-                {
-                    if(sound_setting.getCheck() != music_setting.getCheck())
-                    {
-                        sound_setting.setCheck(false);
-                        music_setting.setCheck(false);
-                    }
-                    else
-                    {
-                        sound_setting.setCheck(!sound_setting.getCheck());
-                        if(music_setting.getCheck())
-                        {
-                            music_setting.setCheck(false);
-                            music.stop();
-                        }
-                        else if(!music_setting.getCheck())
-                        {
-                            music_setting.setCheck(true);
-                            music.play();
-                        }
-                    }
-                }
                 // ------------Side Teleport - Press T------------------
                 if(event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::T)
                 {
@@ -667,18 +642,42 @@ int main()
                         score = 0;
                         currentlevel = 1; // Reset difficulty level
                         // Reset to default values
-                        enemy_count = 8;
-                        enemy_speed = 250;
+                        enemyShip_count = 8;
+                        enemyShip_speed = 250;
                         enemies.clear(); // Clear all enemies
-                        for(int i = 0; i < enemy_count; i++) // Initialize with fixed number of enemies
+                        for(int i = 0; i < enemyShip_count; i++) // Initialize with fixed number of enemies
                         {
-                            makeEnemy(enemy_texture, windowSize, enemy_speed, player, enemies);
+                            makeEnemyShip(enemy_texture, windowSize, enemyShip_speed, player, enemies);
                         }
                     }
                     else if(exit_button.getGlobalBounds().contains(mouseclick_pos.x, mouseclick_pos.y)) // if mouselick is on exit button
                     {
                         write_highscore(highscore);
                         return 0;
+                    }
+                }
+            }
+
+            // ----------Mute - Press M [For all sounds]------------
+            if(event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::M)
+            {
+                if(sound_setting.getCheck() != music_setting.getCheck())
+                {
+                    sound_setting.setCheck(false);
+                    music_setting.setCheck(false);
+                }
+                else
+                {
+                    sound_setting.setCheck(!sound_setting.getCheck());
+                    if(music_setting.getCheck())
+                    {
+                        music_setting.setCheck(false);
+                        music.stop();
+                    }
+                    else if(!music_setting.getCheck())
+                    {
+                        music_setting.setCheck(true);
+                        music.play();
                     }
                 }
             }
@@ -720,14 +719,23 @@ int main()
 
         if(!startmenu) // If not on start menu
         {
-            if(fps_setting.getCheck()) window.draw(fps_text); // Draw fps
+            if(fps_setting.getCheck()) // Draw fps
+            {
+                fps_text.setString(std::to_string(window_fps));
+                fps_text.setPosition(windowSize.x - fps_text.getGlobalBounds().width -5, 0); // Required when fps is more than 2 digits
+                window.draw(fps_text);
+            }
             bullet.drawBullet(window); // Draw bullet
             player.drawPlayer(window); // Draw player/spacship
             for(auto &enemy : enemies) // Iterate through enemies vector
             {
-                enemy.drawEnemy(window); // Draw Enemy
+                window.draw(*enemy); // Draw Enemy
             }
-            if(explosion) window.draw(explosion_sprite); // Draw/Animate explosion
+            for(auto &animation : animations)
+            {
+                if(animation.explosion) window.draw(animation); // Draw/Animate explosion
+            }
+
             if(pause_on) // If game is paused
             {
                 window.draw(overlay); // Draw overlay
@@ -747,13 +755,13 @@ int main()
                 window.draw(overlay);
                 window.draw(exit_button);
                 window.draw(settings_button);
-                window.draw(fps_setting_text);
+                window.draw(fps_setting.text);
                 window.draw(fps_setting);
-                window.draw(sound_setting_text);
+                window.draw(sound_setting.text);
                 window.draw(sound_setting);
-                window.draw(music_setting_text);
+                window.draw(music_setting.text);
                 window.draw(music_setting);
-                window.draw(teleport_setting_text);
+                window.draw(teleport_setting.text);
                 window.draw(teleport_setting);
                 window.draw(helpbox);
             }
@@ -764,7 +772,7 @@ int main()
             }
             window.draw(score_text); // Draw score
         }
-        else
+        else // If start menu
         {
             window.draw(title); // Draw the title
             window.draw(start_button); // Draw the start button

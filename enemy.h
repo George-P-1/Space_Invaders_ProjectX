@@ -2,42 +2,28 @@
 
 #include <SFML/Graphics.hpp>
 
-class Enemy : private sf::Sprite
+class Enemy : public sf::Sprite
 {
-private:
-    int speedx_; // Horizontal speed
-    int y_start_; // The parallel x-axis(fixed y-coordinate) where enemy gets spawned
-    int y_limit_; // The parallel x-axis where the enemy collides with player and game ends
-    int vertical_shift_; // Will determine how fast the enemy reaches the y_limit_
-    int current_y_; // Current y-coordinate of enemy
-
 public:
+    int speedx_; // Horizontal speed
+    int speedy_; // Vertical speed
+    int y_start_ = 50; // The parallel x-axis(fixed y-coordinate) where enemy gets spawned
+    int y_limit_; // The parallel x-axis where the enemy collides with player and game ends
+    int current_y_; // Current y-coordinate of enemy
     bool alive = true; // If enemy is still not destroyed
     bool escape = false; // If enemy crossed y-limit
 
+    virtual ~Enemy() = default; // For polymorhpism since its a base class
+
 public:
-    // Constructor
-    Enemy(sf::Texture &enemy_texture, sf::Vector2i windowSize);
     // Setter for Horizontal speed
-    void setSpeed(int speedx);
+    void setSpeed(int speedx, int speedy);
     // Setter for y_limit
     void setyLimit(int ylimit);
-    // Setter for vertical shift
-    void setVshift(int vshift);
-    // Draw on window
-    void drawEnemy(sf::RenderWindow &window);
-    // Enemy movement
-    void animate(sf::Time elapsed, sf::Vector2i windowSize);
     // Check collision and return bool
     bool isCollided(sf::FloatRect &bulletbounds);
-    // Get Enemy Position
-    sf::Vector2f getEnemyPosition();
-
-private:
     // Set random spawn position for enemy
-    void setSpawnpostion(sf::Vector2i windowSize);
-    // Enemy bounce off sides of window
-    void bounce_shift(sf::Vector2i windowSize);
+    void setSpawnpostion(int x_coordinate, int y_coordinate);
     // Check if enemy crossed the y_limit
     void isEscape();
 };
