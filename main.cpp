@@ -1,3 +1,14 @@
+/*
+ * Space Invaders
+ *     by ProjectX
+ *
+ * Authors:
+ *  George
+ *  Ashish
+ *  Robel
+ *
+*/
+
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 #include <iostream>
@@ -477,8 +488,17 @@ int main()
                         score += 10; // 10 points for each collision
                         // Create animation
                         Animation destroyer_explosion(explosion2_texture, 2);
-                        destroyer_explosion.enemyposition = sf::Vector2f(destroyer->getPosition().x-destroyer->getGlobalBounds().width/2,
-                                                             destroyer->getPosition().y-destroyer->getGlobalBounds().height/2);
+                        // Center explosion wrt to custom destroyer origin if it was set
+                        if(destroyer->getOrigin() != sf::Vector2f(0, 0))
+                        {
+                            destroyer_explosion.enemyposition = sf::Vector2f(destroyer->getPosition().x-destroyer->getGlobalBounds().width/2,
+                                                                             destroyer->getPosition().y-destroyer->getGlobalBounds().height/2);
+                        }
+                        else
+                        {
+//                            destroyer_explosion.setRotation(destroyer_explosion.getRotation()); // Doesn't work well
+                            destroyer_explosion.enemyposition = sf::Vector2f(destroyer->getPosition().x, destroyer->getPosition().y);
+                        }
                         destroyer_explosion.explosion = true;
                         animations.emplace_back(destroyer_explosion);
                         if(sound_setting.getCheck()) explosion_sound.play();
@@ -520,6 +540,7 @@ int main()
             enemyShip_count = 8;
             enemyShip_speed = 250;
             enemies.clear(); // Clear all enemies
+            bullet.fired = false; // Reset bullet
             for(int i = 0; i < enemyShip_count; i++) // Initialize with fixed number of enemies
             {
                 makeEnemyShip(enemy_texture, windowSize, enemyShip_speed, player, enemies);
@@ -645,6 +666,7 @@ int main()
                         enemyShip_count = 8;
                         enemyShip_speed = 250;
                         enemies.clear(); // Clear all enemies
+                        bullet.fired = false; // Reset bullet
                         for(int i = 0; i < enemyShip_count; i++) // Initialize with fixed number of enemies
                         {
                             makeEnemyShip(enemy_texture, windowSize, enemyShip_speed, player, enemies);
